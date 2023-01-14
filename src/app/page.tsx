@@ -1,91 +1,241 @@
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from './page.module.css'
+"use client";
 
-const inter = Inter({ subsets: ['latin'] })
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { createContext, useContext, useState } from "react";
+import { Inter } from "@next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
+
+let transition = { type: "ease", ease: "easeInOut", duration: 1 };
 
 export default function Home() {
+  const [status, setStatus] = useState("idle");
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className={inter.className}>
+      <div className="flex min-h-screen flex-col items-start bg-zinc-900 pt-28">
+        <div className="mx-auto w-full max-w-md">
+          <div className="rounded-2xl border border-zinc-700 bg-zinc-800">
+            <div className="px-8 pt-8">
+              <p className="text-lg text-white">Reset password</p>
+            </div>
+
+            {status === "idle" || status === "saving" ? (
+              <div>
+                <Form
+                  onSubmit={async () => await delay(1000)}
+                  afterSave={() => setStatus("success")}
+                  className="p-8"
+                >
+                  <p className="text-sm text-zinc-400">
+                    Enter your email to get a password reset link:
+                  </p>
+                  <div className="mt-3">
+                    <input
+                      className="block w-full rounded border-none text-slate-900"
+                      type="email"
+                      required
+                      defaultValue="sam@buildui.com"
+                    />
+                  </div>
+                  <div className="mt-8 text-right">
+                    <Form.Button className="rounded bg-indigo-500 px-5 py-2 text-sm font-medium text-white">
+                      Email me my link
+                    </Form.Button>
+                  </div>
+                </Form>
+              </div>
+            ) : (
+              <p className="p-8 text-sm text-zinc-400">
+                Email sent! Check your inbox to continue.
+              </p>
+            )}
+          </div>
+
+          <p className="mt-8 text-sm text-zinc-500">
+            <span className="underline">Reach out</span> to us if you need more
+            help.
+          </p>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
+let formContext = createContext();
 
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+function Form({ onSubmit, afterSave, children, ...props }) {
+  let [status, setStatus] = useState("idle");
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setStatus("saving");
+    await onSubmit();
+    setStatus("success");
+    await delay(1250);
+    afterSave();
+  }
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+  return (
+    <formContext.Provider value={{ status }}>
+      <form onSubmit={handleSubmit} {...props}>
+        <fieldset disabled={status !== "idle"}>{children}</fieldset>
+      </form>
+    </formContext.Provider>
+  );
+}
+
+Form.Button = function FormButton({ children, className, ...rest }) {
+  let { status } = useContext(formContext);
+
+  let disabled = status !== "idle";
+
+  return (
+    <MotionConfig transition={{ ...transition, duration: 0.15 }}>
+      <button
+        type="submit"
+        disabled={disabled}
+        className={`${className} relative transition duration-200 ${
+          disabled ? "bg-opacity-80" : "hover:bg-opacity-80"
+        }`}
+        {...rest}
+      >
+        <AnimatePresence mode="wait">
+          {status === "saving" && (
+            <motion.div
+              key="a"
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex justify-center py-2"
+            >
+              <Spinner />
+            </motion.div>
+          )}
+
+          {status === "success" && (
+            <motion.div
+              key="b"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 flex justify-center py-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-full"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 12.75l6 6 9-13.5"
+                />
+              </svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <span className={status === "idle" ? "" : "invisible"}>{children}</span>
+      </button>
+    </MotionConfig>
+  );
+};
+
+function Spinner({ className, ...rest }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`${className} h-full w-auto animate-spin`}
+      style={{
+        animationTimingFunction: "steps(8, end)",
+        animationDuration: ".75s",
+      }}
+      {...rest}
+    >
+      <rect
+        style={{ opacity: 0.4 }}
+        x={11}
+        y={2}
+        width={2}
+        height={6}
+        rx={1}
+        fill="currentColor"
+      />
+      <rect
+        style={{ opacity: 0.4 }}
+        x={18.364}
+        y={4.22183}
+        width={2}
+        height={6}
+        rx={1}
+        transform="rotate(45 18.364 4.222)"
+        fill="currentColor"
+      />
+      <rect
+        x={22}
+        y={11}
+        width={2}
+        style={{ opacity: 0.4 }}
+        height={6}
+        rx={1}
+        transform="rotate(90 22 11)"
+        fill="currentColor"
+      />
+      <rect
+        x={19.7782}
+        y={18.364}
+        width={2}
+        style={{ opacity: 0.4 }}
+        height={6}
+        rx={1}
+        transform="rotate(135 19.778 18.364)"
+        fill="currentColor"
+      />
+      <rect
+        x={13}
+        y={22}
+        width={2}
+        style={{ opacity: 0.4 }}
+        height={6}
+        rx={1}
+        transform="rotate(-180 13 22)"
+        fill="currentColor"
+      />
+      <rect
+        x={5.63603}
+        y={19.7782}
+        width={2}
+        style={{ opacity: 0.6 }}
+        height={6}
+        rx={1}
+        transform="rotate(-135 5.636 19.778)"
+        fill="currentColor"
+      />
+      <rect
+        x={2}
+        y={13}
+        width={2}
+        style={{ opacity: 0.8 }}
+        height={6}
+        rx={1}
+        transform="rotate(-90 2 13)"
+        fill="currentColor"
+      />
+      <rect
+        x={4.22183}
+        y={5.63603}
+        width={2}
+        height={6}
+        rx={1}
+        transform="rotate(-45 4.222 5.636)"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
